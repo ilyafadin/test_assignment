@@ -1,5 +1,5 @@
 # test_assignment
-**API provides methods:**
+**this API provides methods:**
 
 createUser(String name, String pass)
 
