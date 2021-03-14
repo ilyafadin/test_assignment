@@ -2,9 +2,14 @@ package entities;
 
 //import java.util.Base64;
 
-import javax.xml.bind.DatatypeConverter;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+//import javax.xml.bind.DatatypeConverter;
+import java.security.NoSuchProviderException;
+import java.security.SecureRandom;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.spec.KeySpec;
 import java.util.ArrayList;
 import java.util.HashSet;
 
@@ -25,19 +30,19 @@ public class User {
     }
 
     public String hashPassword(String pass) {
-        MessageDigest md = null;
+        String myHash = "";
         try {
-            md = MessageDigest.getInstance("MD5");
-            md.update(pass.getBytes());
-            md.update(this.salt.getBytes());
+            SecureRandom random = new SecureRandom();
+            byte[] salt = new byte[16];
+            random.nextBytes(salt);
+            KeySpec spec = new PBEKeySpec(pass.toCharArray(), salt, 65536, 128);
+            SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
+            byte[] hash = factory.generateSecret(spec).getEncoded();
+        } catch (java.security.spec.InvalidKeySpecException e) {
+            System.err.println("InvalidKeySpecException");
+        } catch (NoSuchAlgorithmException e) {
+            System.err.println("NoSuchProviderException");
         }
-        catch (NoSuchAlgorithmException e) {
-            System.err.println("MD5 is not a valid message digest algorithm");
-        }
-
-        byte[] digest = md.digest();
-        String myHash = DatatypeConverter
-                .printHexBinary(digest).toUpperCase();
         return myHash;
     }
 

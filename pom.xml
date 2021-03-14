@@ -30,6 +30,9 @@
         </plugins>
     </build>
 
+    <properties>
+        <java.version>14</java.version>
+    </properties>
 
 </project>
 

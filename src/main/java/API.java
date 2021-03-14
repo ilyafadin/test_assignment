@@ -1,6 +1,8 @@
 import java.lang.reflect.Array;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.security.spec.KeySpec;
 import java.util.ArrayList;
 import java.util.*;
 
@@ -10,7 +12,8 @@ import entities.Role;
 import entities.User;
 import entities.AuthDetails;
 
-import javax.xml.bind.DatatypeConverter;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
 import java.util.function.Predicate;
 
 import java.util.concurrent.TimeUnit;
@@ -113,21 +116,20 @@ public class API {
         return new Response(200, String.format("role %s has been added", role.getName()));
     }
 
-    private String createToken(String username, Long curtime) {
-
-        MessageDigest md = null;
+    private String createToken(String username) {
+        String myHash = "";
         try {
-            md = MessageDigest.getInstance("MD5");
-            md.update(username.getBytes());
-            md.update(curtime.toString().getBytes());
+            SecureRandom random = new SecureRandom();
+            byte[] salt = new byte[16];
+            random.nextBytes(salt);
+            KeySpec spec = new PBEKeySpec(username.toCharArray(), salt, 65536, 128);
+            SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
+            byte[] hash = factory.generateSecret(spec).getEncoded();
+        } catch (java.security.spec.InvalidKeySpecException e) {
+            System.err.println("InvalidKeySpecException");
+        } catch (NoSuchAlgorithmException e) {
+            System.err.println("NoSuchProviderException");
         }
-        catch (NoSuchAlgorithmException e) {
-            System.err.println("MD5 is not a valid message digest algorithm");
-        }
-
-        byte[] digest = md.digest();
-        String myHash = DatatypeConverter
-                .printHexBinary(digest).toUpperCase();
         return myHash;
 
     }
@@ -149,7 +151,7 @@ public class API {
 
                 Long curtime = System.currentTimeMillis();
 
-                String newToken = createToken(username, curtime);
+                String newToken = createToken(username);
 
                 AuthDetails newTokenTuple = new AuthDetails(username, newToken, curtime);
                 authDetails.add(newTokenTuple);
