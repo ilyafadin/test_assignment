@@ -3,17 +3,14 @@ import entities.Role;
 import entities.User;
 import org.testng.annotations.Test;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 
 public class APITest {
 
     public void printResponse(Response response){
-        System.out.println(response.getCode() + " " + response.getMassage());
+        System.out.println(response.getCode() + " " + response.getMessage());
     }
 
     @Test
@@ -112,7 +109,7 @@ public class APITest {
         api.createUser("anton", "pass");
         Response result = api.authenticate("anton", "pass");
         printResponse(result);
-        api.invalidate(result.getMassage());
+        api.invalidate(result.getMessage());
         assert(true);
     }
 
@@ -132,7 +129,7 @@ public class APITest {
         //    System.err.println("TimeUnit.SECONDS.sleep fail");
         //}
 
-        Boolean result2 = api.checkRole(result.getMassage(), new Role("admin"));
+        Boolean result2 = api.checkRole(result.getMessage(), new Role("admin"));
 
         assert (result2.equals(true));
 
@@ -146,7 +143,7 @@ public class APITest {
         api.addRoleToUser(new User("anton", "pass"), new Role("admin"));
         Response result = api.authenticate("anton", "pass");
 
-        Optional<HashSet<Role>> roles = api.allRoles(result.getMassage());
+        Optional<HashSet<Role>> roles = api.allRoles(result.getMessage());
 
         ArrayList<String> userRoles = new ArrayList<>();
         for (Role r : roles.get()) {

@@ -12,6 +12,8 @@ import java.security.NoSuchAlgorithmException;
 import java.security.spec.KeySpec;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
 
 public class User {
 
@@ -62,4 +64,16 @@ public class User {
         return this.roles;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof User)) return false;
+        User user = (User) o;
+        return getName().equals(user.getName());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getName());
+    }
 }

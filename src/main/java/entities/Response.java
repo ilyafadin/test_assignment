@@ -14,7 +14,7 @@ public class Response {
         return this.code;
     }
 
-    public String getMassage() {
+    public String getMessage() {
         return this.message;
     }
 }

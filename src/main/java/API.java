@@ -6,7 +6,7 @@ import java.security.spec.KeySpec;
 import java.util.ArrayList;
 import java.util.*;
 
-import com.sun.org.apache.bcel.internal.generic.RETURN;
+//import com.sun.org.apache.bcel.internal.generic.RETURN;
 import entities.Response;
 import entities.Role;
 import entities.User;
@@ -17,15 +17,15 @@ import javax.crypto.spec.PBEKeySpec;
 import java.util.function.Predicate;
 
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class API {
 
-    ArrayList<User> users = new ArrayList();
-    ArrayList<Role> roles = new ArrayList();
+    private static Set<User> users = new HashSet<>();
+    private static Set<Role> roles = new HashSet<>();
 
 
-    ArrayList<AuthDetails> authDetails = new ArrayList<AuthDetails>();
-
+    private static List<AuthDetails> authDetails = new ArrayList<AuthDetails>();
 
     public static void main(String[] args) {
         System.out.println("Test assignment");
@@ -33,51 +33,35 @@ public class API {
 
     public Response createUser(String name, String pass) {
 
-        List usernames = new ArrayList();
+        boolean contains = users.stream().anyMatch(u -> u.getName().equals(name));
 
-        for (User u : users) {
-            usernames.add(u.getName());
-        }
-
-        if (usernames.contains(name)) {
+        if (contains) {
             return new Response(422, String.format("user %s already exists", name));
         } else {
             if (!name.equals("")) {
                 User newUser = new User(name, pass);
                 users.add(newUser);
                 return new Response(200, String.format("user %s created", name));
-            } else return new Response(422, String.format("user name is empty"));
-
+            } else return new Response(422, "user name is empty");
         }
-
     }
 
 
     public Response deleteUser(User user) {
 
-        List usernames = new ArrayList();
-        for (User u : users) {
-            usernames.add(u.getName());
-        }
-
-        if (!usernames.contains(user.getName())) {
+        if (!users.contains(user)) {
             return new Response(422, String.format("user %s does not exists", user.getName()));
         } else {
             users.remove(user);
-            return new Response(200, String.format("user %s has been deleted", user.getName()));
+            return new Response(200, String.format("user %s has been removed", user.getName()));
         }
     }
 
 
     public Response createRole(String roleName) {
+        boolean roleFound = roles.stream().anyMatch(r -> r.getName().equals(roleName));
 
-        List roleNames = new ArrayList();
-
-        for (Role r : roles) {
-            roleNames.add(r.getName());
-        }
-
-        if (roleNames.contains(roleName)) {
+        if (roleFound) {
             return new Response(422, String.format("role %s already exists", roleName));
         } else {
             Role newRole = new Role(roleName);
@@ -87,12 +71,8 @@ public class API {
     }
 
     public Response deleteRole(Role role) {
-        ArrayList<String> roleNames = new ArrayList();
-        for (Role r : roles) {
-            roleNames.add(r.getName());
-        }
 
-        if (!roleNames.contains(role.getName())) {
+        if (!roles.contains(role)) {
             return new Response(422, String.format("role %s does not exists", role.getName()));
         } else {
             roles.remove(role);
@@ -104,7 +84,9 @@ public class API {
 
         for (User u : users) {
             if (u.getName().equals(user.getName())) {
-                if (u.getRoles().contains(role.getName())) {
+                Set<Role> userRoles = u.getRoles();
+                boolean roleFound = userRoles.contains(role);
+                if (roleFound) {
                     return new Response(422, String.format("role %s for user %s already exists",
                             role.getName(), user.getName()));
                 } else {
@@ -144,18 +126,12 @@ public class API {
         }
 
         if (userFound != null) {
-
             String thisUserPass = userFound.hashPassword(password);
-
             if (thisUserPass.equals(userFound.getPass())) {
-
                 Long curtime = System.currentTimeMillis();
-
                 String newToken = createToken(username);
-
                 AuthDetails newTokenTuple = new AuthDetails(username, newToken, curtime);
                 authDetails.add(newTokenTuple);
-
                 return new Response(200, newToken);
             } else
                 return new Response(422, String.format("password for %s is not correct", username));
@@ -175,7 +151,6 @@ public class API {
         if (currentAuthDetails != null) {
             authDetails.remove(currentAuthDetails);
         }
-
     }
 
     public Boolean checkRole(String token, Role role) {
@@ -189,46 +164,24 @@ public class API {
                 authDetail = a;
         }
 
-        String username = "";
-        Long tokenTime = 0L;
         if (authDetail != null) {
-            username = authDetail.getUsername();
-            tokenTime = authDetail.getTokenExpiration();
-        }
+            String username = authDetail.getUsername();
+            Long tokenTime = authDetail.getTokenExpiration();
 
-        Long tokenLifeHours = TimeUnit.MILLISECONDS.toHours(currentTime - tokenTime);
-        //can change to tokenLifeSeconds in if below for testing purpose
-        //Long tokenLifeSeconds = TimeUnit.MILLISECONDS.toSeconds(currentTime - tokenTime); //
+            Long tokenLifeHours = TimeUnit.MILLISECONDS.toHours(currentTime - tokenTime);
+            //can change to tokenLifeSeconds in if below for testing purpose
+            //Long tokenLifeSeconds = TimeUnit.MILLISECONDS.toSeconds(currentTime - tokenTime); //
 
-        if (tokenLifeHours < 2 ) {
-            List usernames = new ArrayList();
-            for (User u : users) {
-                usernames.add(u.getName());
+            if (tokenLifeHours < 2 ) {
+                Optional<Boolean> rolesFound = users.stream().filter(u -> u.getName().equals(username)).map(u -> {
+                    HashSet<Role> userRoles = u.getRoles();
+                    return userRoles.contains(role);
+                }).findFirst();
+                return rolesFound.orElse(false);
+            } else {
+                return false;
             }
-
-            HashSet<Role> userRoles = new HashSet<>();
-            if (usernames.contains(username)) {
-                for (User u : users) {
-                    if (u.getName().equals(username)) {
-                        userRoles = u.getRoles();
-                    }
-                }
-                ArrayList<String> userRoleNames = new ArrayList<>();
-                for( Role r : userRoles) {
-                    userRoleNames.add(r.getName());
-                }
-
-                if (userRoleNames.contains(role.getName())) {
-                    return true;
-                } else {
-                    return false;
-                }
-
-            } else return false;
-
-        } else {
-            return false;
-        }
+        } else return false;
 
     }
 
